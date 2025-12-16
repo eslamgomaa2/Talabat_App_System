@@ -18,6 +18,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Domin\Domin.csproj" />
+		<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
 		<ProjectReference Include="..\Repository\Servces.csproj" />
 	</ItemGroup>
 </Project>

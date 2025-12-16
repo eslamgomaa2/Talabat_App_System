@@ -1,5 +1,6 @@
 using Domin.Helper;
 using Domin.Models;
+using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -30,11 +31,9 @@ builder.Services.AddHttpClient("PaymobClient", client =>
     client.BaseAddress = new Uri("https://accept.paymob.com/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
+builder.Services.AddInfrastructure();
 
-builder.Services.AddTransient<IAccountServices,AccountServices>();
-builder.Services.AddTransient<IAddressServices, AddressServices>();
-builder.Services.AddTransient<IUserProfile,UserProfile>();
-builder.Services.AddTransient<IEmailService,EmailService>();
+
 builder.Services.AddAuthentication(o =>
 {
     o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
