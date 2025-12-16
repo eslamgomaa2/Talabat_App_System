@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Domin\Domin.csproj" />
+    <ProjectReference Include="..\SeedingData\SeedingData.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using SeedingData.Accounts;
+using SeedingData.Mapping;
+using SeedingData.Roles;
 
 namespace Repository
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
         public ApplicationDbContext(DbContextOptions options) : base(options)
         {
