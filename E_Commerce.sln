@@ -18,6 +18,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gitignore", "gitignore", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repository", "Services\Repository.csproj", "{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{BC9419FD-F402-4FC2-ADEB-34E7D1BAB020}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC9419FD-F402-4FC2-ADEB-34E7D1BAB020}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC9419FD-F402-4FC2-ADEB-34E7D1BAB020}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC9419FD-F402-4FC2-ADEB-34E7D1BAB020}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC9419FD-F402-4FC2-ADEB-34E7D1BAB020}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
