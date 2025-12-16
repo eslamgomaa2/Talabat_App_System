@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "E_Commerce", "E_Commerce\E_
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domin", "Domin\Domin.csproj", "{A6DEC789-A668-413A-83C2-E8C77FEE0FF0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repository", "Repository\Repository.csproj", "{7A4C6314-B704-41F2-9EBF-83DC312C5C0C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Servces", "Repository\Servces.csproj", "{7A4C6314-B704-41F2-9EBF-83DC312C5C0C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeedingData", "SeedingData\SeedingData.csproj", "{3BDB6D11-C2C4-4CB2-9E99-08751A21BB38}"
 EndProject
@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gitignore", "gitignore", "{
 	ProjectSection(SolutionItems) = preProject
 		x.gitignore = x.gitignore
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repository", "Services\Repository.csproj", "{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,8 +40,15 @@ Global
 		{3BDB6D11-C2C4-4CB2-9E99-08751A21BB38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3BDB6D11-C2C4-4CB2-9E99-08751A21BB38}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3BDB6D11-C2C4-4CB2-9E99-08751A21BB38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C7FEAE2-AD0F-44F0-8A8C-88B1F05824BE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {33142A5A-3618-4E7F-98B7-7F05EF71C28F}
 	EndGlobalSection
 EndGlobal

@@ -14,159 +14,100 @@ namespace Repository.Implementation
 {
     public class AccountServices : IAccountServices
     {
-
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly Jwt _jwt;
         private readonly IEmailService _emailService;
-        private readonly ApplicationDbContext _DbContext;
-        public AccountServices(UserManager<ApplicationUser> userManager, IOptions<Jwt> jwt, IEmailService emailService, ApplicationDbContext applicationDbContext)
+        private readonly ApplicationDbContext _dbContext;
+
+        public AccountServices(
+            UserManager<ApplicationUser> userManager,
+            IOptions<Jwt> jwt,
+            IEmailService emailService,
+            ApplicationDbContext dbContext)
         {
             _userManager = userManager;
             _jwt = jwt.Value;
             _emailService = emailService;
-            _DbContext = applicationDbContext;
+            _dbContext = dbContext;
         }
 
+        
         public async Task<AuthenticationResponse> Login(AuthenticationRequest request)
         {
-            AuthenticationResponse response = new AuthenticationResponse();
-            var User = await _userManager.FindByEmailAsync(request.Email!);
-            if (User is null || !await _userManager.CheckPasswordAsync(User, request.Password!))
+            var user = await _userManager.FindByEmailAsync(request.Email!);
+            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password!))
+                return new AuthenticationResponse { Message = "Email or Password is not correct" };
+
+            var jwtToken = await GenerateJwtSecurityToken(user);
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return new AuthenticationResponse
             {
-                response.Message = "Email or Password is not Correct";
-                return response;
-            }
-            JwtSecurityToken Jwt = await GenerateJwtSecurityToken(User);
-            response.Id = User.Id;
-            response.UserName = User.UserName;
-            response.Email = User.Email;
-            response.IsAuthenticated = true;
-            response.JWToken = new JwtSecurityTokenHandler().WriteToken(Jwt);
-            IList<string> roleslist = await _userManager.GetRolesAsync(User);
-            response.Roles = roleslist.ToList();
-            return response;
-
-        }
-
-        public async Task<AuthenticationResponse> RegisterUserAscustomer(Register register)
-
-        {
-            return await RegisterUserAs(register, Roles.Customer);
-
-
-        }
-        public async Task<AuthenticationResponse> RegisterUserAsDriver(Register register)
-
-        {
-           return await RegisterUserAs(register, Roles.Driver);
-
-
-
-        }
-        public async Task<AuthenticationResponse> RegisterUserAsRestaurantOwner(Register register)
-
-        {
-            return await RegisterUserAs(register, Roles.RestaurantOwner);
-
-
-        }
-        public async Task ForgotPassword(ForgotPasswordRequest forgotPasswordRequest)
-        {
-            AuthenticationResponse response = new AuthenticationResponse();
-            var user = await _userManager.FindByEmailAsync(forgotPasswordRequest.Email!);
-            if (user is null)
-            {
-                throw new Exception("User Not Found");
-            }
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user!);
-            //var random = new Random();
-            //var numericToken = random.Next(100000, 999999).ToString();
-            var mail = new Email
-            {
-                MailTo = forgotPasswordRequest.Email,
-                Subject = $"Reset token is{token}",
-                Body = $"Reset password"
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                IsAuthenticated = true,
+                JWToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                Roles = roles.ToList()
             };
-            await _emailService.SendEmail(mail.MailTo!, mail.Subject, mail.Body);
-
         }
 
-
-
-        public async Task<AuthenticationResponse> ResetPassword(ResetPasswordRequest resetPasswordRequest)
+        private async Task<JwtSecurityToken> GenerateJwtSecurityToken(ApplicationUser user)
         {
-            var response = new AuthenticationResponse();
-            var user = await _userManager.FindByEmailAsync(resetPasswordRequest.Email!);
-            if (user is null)
-            {
-                response.Message = "user not found";
-                return response;
-            }
-            var result = await _userManager.ResetPasswordAsync(user, resetPasswordRequest.Token!, resetPasswordRequest.Password!);
-            if (result.Succeeded)
-            {
-                response.Message = "password is changed";
-                return response;
-            }
-            response.Message = "there is an errro";
-            return response;
-
-
-        }
-        private async Task<JwtSecurityToken> GenerateJwtSecurityToken(ApplicationUser User)
-        {
-            var userclaim = await _userManager.GetClaimsAsync(User);
-            var roles = await _userManager.GetRolesAsync(User);
-            var roleClaims = roles.Select(role => new Claim("roles", role));
+            var userclaims = await _userManager.GetClaimsAsync(user);
+            var userroles = await _userManager.GetRolesAsync(user);
             var claims = new[]
             {
-
-        new Claim(ClaimTypes.NameIdentifier, User.Id),
-        new Claim(ClaimTypes.Name, User.UserName!),
-        new Claim(ClaimTypes.Email, User.Email!),
-
+                new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.UserName!),
+                new Claim(ClaimTypes.Email, user.Email!)
             }
-            .Union(userclaim)
-            .Union(roleClaims);
-            var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key!));
-            var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
+            .Union(userclaims)
+            .Union(userroles.Select(role => new Claim("roles", role)));
 
-            var jwtSecurityToken = new JwtSecurityToken(
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            return new JwtSecurityToken(
                 issuer: _jwt.Issuer,
                 audience: _jwt.Audience,
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(_jwt.DurationInMinutes),
-                signingCredentials: signingCredentials
-                );
-
-            return jwtSecurityToken;
+                signingCredentials: creds
+            );
         }
+      
+
+        
+        public async Task<AuthenticationResponse> RegisterUserAscustomer(Register register)
+            => await RegisterUserAs(register, Roles.Customer);
+
+        public async Task<AuthenticationResponse> RegisterUserAsDriver(Register register)
+            => await RegisterUserAs(register, Roles.Driver);
+
+        public async Task<AuthenticationResponse> RegisterUserAsRestaurantOwner(Register register)
+            => await RegisterUserAs(register, Roles.RestaurantOwner);
 
         public async Task<AuthenticationResponse> RegisterUserAs(Register register, Roles role)
         {
-            AuthenticationResponse response = new AuthenticationResponse();
-            var validInput = ValidUserInput(register);
-            if (!validInput.IsAuthenticated)
-            {
-                response.Message = validInput.Message;
-                return response;
-            }
-            var userexist = await CheckUserExist(register.Email!, register.UserName!);
-            if (!userexist.IsAuthenticated) 
-            {
-                return userexist;
-            }
-            var newuser = CreateApplicationUSer(register);
-            var result = await _userManager.CreateAsync(newuser, register.Password!);
+            var validation = ValidateUserInput(register);
+            if (!validation.IsAuthenticated)
+                return validation;
+
+            var exists = await CheckUserExist(register.Email!, register.UserName!);
+            if (!exists.IsAuthenticated)
+                return exists;
+
+            var newUser = CreateApplicationUser(register);
+            var result = await _userManager.CreateAsync(newUser, register.Password!);
+
             if (!result.Succeeded)
-            {
+                return new AuthenticationResponse { Message = string.Join(" ", result.Errors.Select(e => e.Description)) };
 
-                response.Message = string.Join(" ", result.Errors.Select(e => e.Description));
-                return response;
-            }
+             await _userManager.AddToRoleAsync(newUser, role.ToString());
 
-            await _userManager.AddToRoleAsync(newuser, role.ToString());
-            if (role is Roles.Driver)
+            
+            if (role == Roles.Driver)
             {
                 var driver = new Driver
                 {
@@ -174,92 +115,63 @@ namespace Repository.Implementation
                     PhoneNumber = register.PhoneNUmber,
                     VehicleRegistration = register.VehicleRegistration,
                     VehicleType = register.VehicleType,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                    
                 };
-                await _DbContext.Drivers.AddAsync(driver); 
-                await _DbContext.SaveChangesAsync(); 
+                await _dbContext.Drivers.AddAsync(driver);
             }
-            if (role is Roles.RestaurantOwner)
+            else if (role == Roles.RestaurantOwner)
             {
                 var owner = new Resaurant_Owner
                 {
                     FName = register.FName,
                     LName = register.LName,
                     Email = register.Email,
-                    Phone_Numbber= register.UserName,
-                    UserId=newuser.Id,
+                    Phone_Numbber = register.UserName,
                     
                 };
-                await _DbContext.Resaurant_Owners.AddAsync(owner);
-                await _DbContext.SaveChangesAsync();
+                await _dbContext.Resaurant_Owners.AddAsync(owner);
             }
 
+            await _dbContext.SaveChangesAsync();
 
-            response.Message = "User Created Successfully";
-            response.IsAuthenticated = true;
+            return new AuthenticationResponse
+            {
+                Message = "User created successfully",
+                IsAuthenticated = true
+            };
+        }
 
-            return response;
+        private AuthenticationResponse ValidateUserInput(Register request)
+        {
+            var errors = new List<string>();
 
+            if (string.IsNullOrWhiteSpace(request.FName)) errors.Add("First Name is required");
+            if (string.IsNullOrWhiteSpace(request.LName)) errors.Add("Last Name is required");
+            if (string.IsNullOrWhiteSpace(request.UserName)) errors.Add("UserName is required");
+            if (string.IsNullOrWhiteSpace(request.Email)) errors.Add("Email is required");
+            if (string.IsNullOrWhiteSpace(request.PhoneNUmber)) errors.Add("PhoneNumber is required");
+            if (string.IsNullOrWhiteSpace(request.Password)) errors.Add("Password is required");
+
+            return errors.Any()
+                ? new AuthenticationResponse { Message = string.Join(", ", errors) }
+                : new AuthenticationResponse { IsAuthenticated = true };
         }
 
         private async Task<AuthenticationResponse> CheckUserExist(string email, string username)
         {
-            AuthenticationResponse response = new AuthenticationResponse();
-            var useremailExist = await _userManager.FindByEmailAsync(email!);
-            var usernameExist = await _userManager.FindByNameAsync(username!);
-            if (useremailExist != null || usernameExist != null)
-            {
-                response.Message = $"Username{username} or email{email} is lAlready Exist";
-                return response;
-            }
-            response.Message = "User is not Exist, you can register now";
-            response.IsAuthenticated = true;
-            return response;
+            var emailExists = await _userManager.FindByEmailAsync(email);
+            var usernameExists = await _userManager.FindByNameAsync(username);
+
+            if (emailExists != null || usernameExists != null)
+                return new AuthenticationResponse { Message = $"Username '{username}' or Email '{email}' already exists" };
+
+            return new AuthenticationResponse { Message = "User can register", IsAuthenticated = true };
         }
-        private AuthenticationResponse ValidUserInput(Register request)
+
+        private ApplicationUser CreateApplicationUser(Register request)
         {
-            var errors = new List<string>();
-            AuthenticationResponse response = new AuthenticationResponse();
-            if (string.IsNullOrEmpty(request.FName))
-            {
-                errors.Add("First Name is required");
-
-            }
-            if (string.IsNullOrEmpty(request.LName))
-            {
-                errors.Add("Last Name is required");
-
-            }
-            if (string.IsNullOrEmpty(request.UserName))
-            {
-                errors.Add("UserName is required");
-
-            }
-            if (string.IsNullOrEmpty(request.Email))
-            {
-                errors.Add("Email is required");
-
-            }
-            if (string.IsNullOrEmpty(request.PhoneNUmber))
-            {
-                errors.Add("PhoneNumber is required");
-
-            }
-            if (string.IsNullOrEmpty(request.Password))
-            {
-                errors.Add("PassWord is required");
-
-            }
-            if (errors.Any())
-            {
-                response.Message = string.Join(", ", errors);
-                return response;
-            }
-            return new AuthenticationResponse { IsAuthenticated = true };
-        }
-        private ApplicationUser CreateApplicationUSer(Register request)
-        {
-            return new ApplicationUser()
+            return new ApplicationUser
             {
                 FName = request.FName,
                 LName = request.LName,
@@ -270,5 +182,32 @@ namespace Repository.Implementation
                 PhoneNumberConfirmed = true
             };
         }
+       
+
+        #region Password Management
+        public async Task ForgotPassword(ForgotPasswordRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email!);
+            if (user == null) throw new Exception("User not found");
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            await _emailService.SendEmail(
+                request.Email!,
+                $"Reset token is {token}",
+                "Reset password"
+            );
+        }
+
+        public async Task<AuthenticationResponse> ResetPassword(ResetPasswordRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email!);
+            if (user == null) return new AuthenticationResponse { Message = "User not found" };
+
+            var result = await _userManager.ResetPasswordAsync(user, request.Token!, request.Password!);
+            return result.Succeeded
+                ? new AuthenticationResponse { Message = "Password changed successfully" }
+                : new AuthenticationResponse { Message = "Failed to reset password" };
+        }
+        #endregion
     }
 }

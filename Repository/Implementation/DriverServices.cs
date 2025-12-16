@@ -1,23 +1,20 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Enum;
 using Domin.Models;
-using Microsoft.EntityFrameworkCore;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
     public class DriverServices : IDriverServices
     {
-        private readonly ApplicationDbContext _dbcontext;
+        private readonly IDriverRepository _driverRepository;
 
-        public DriverServices(ApplicationDbContext dbcontext)
+        public DriverServices(IDriverRepository driverRepository)
         {
-            _dbcontext = dbcontext;
+            _driverRepository = driverRepository;
         }
 
         public async Task<Driver> AddNewDriver(DriverDto driver)
@@ -25,142 +22,114 @@ namespace Repository.Implementation
             var trimmedName = driver.Name?.Trim();
             var normalizedPhone = driver.PhoneNumber?.Trim();
 
-            var existdriver = await _dbcontext.Drivers.SingleOrDefaultAsync(o => o.PhoneNumber==normalizedPhone && o.Name==trimmedName);
-            if (existdriver != null) 
-            {
-                throw new InvalidOperationException("Driver is Already Exist");
-            }
-            var drivers = new Driver
+            var existDriver = await _driverRepository.FindByPhoneAsync(normalizedPhone);
+            if (existDriver != null && existDriver.Name == trimmedName)
+                throw new InvalidOperationException("Driver already exists");
+
+            var newDriver = new Driver
             {
                 Name = driver.Name,
-                PhoneNumber= driver.PhoneNumber,
-                CreatedAt=DateTime.Now,
-                VehicleType= driver.VehicleType,
-                VehicleRegistration = driver.VehicleRegistration,
-                
+                PhoneNumber = driver.PhoneNumber,
+                CreatedAt = DateTime.Now,
+                VehicleType = driver.VehicleType,
+                VehicleRegistration = driver.VehicleRegistration
             };
-            await _dbcontext.Drivers.AddAsync(drivers);
-            await _dbcontext.SaveChangesAsync();
-            return drivers;
 
-
+            await _driverRepository.AddAsync(newDriver);
+            return newDriver;
         }
-
-       
 
         public async Task<string> DeleteDriver(int id)
         {
-            var driver = await _dbcontext.Drivers.SingleOrDefaultAsync(o => o.DriverId == id) ?? throw new InvalidOperationException("Driver Doesn't Exist"); ;
-           
-            _dbcontext.Drivers.Remove(driver);  
-            await _dbcontext.SaveChangesAsync();
-            return "Driver Deleted Successfully";
+            var driver = await _driverRepository.GetByIdAsync(id) ?? throw new InvalidOperationException("Driver doesn't exist");
+            await _driverRepository.DeleteAsync(driver);
+            return "Driver deleted successfully";
         }
 
-        public Task<List<Driver>> FilterByVehicleType(Vehicles vehicletype)
+        public async Task<List<Driver>> FilterByVehicleType(Vehicles vehicleType)
         {
-            if (!Enum.IsDefined(typeof(Vehicles), vehicletype))
-            {
-                throw new ArgumentOutOfRangeException(nameof(vehicletype), "Invalid vehicle type.");
-            }
+            if (!Enum.IsDefined(typeof(Vehicles), vehicleType))
+                throw new ArgumentOutOfRangeException(nameof(vehicleType), "Invalid vehicle type.");
 
-            var drivers = _dbcontext.Drivers
-                .Where(d => d.VehicleType == vehicletype)
-                .ToListAsync();
-
-            return drivers;
+            return await _driverRepository.FilterByVehicleTypeAsync(vehicleType);
         }
-
-
         public async Task<Driver> FindDriverByphone(string phone)
         {
-            var driver=await _dbcontext.Drivers.SingleOrDefaultAsync(o => o.PhoneNumber == phone.Trim())?? throw new InvalidOperationException("Driver Not Found");
+            var driver = await _driverRepository.FindByPhoneAsync(phone)
+                         ?? throw new InvalidOperationException("Driver not found");
             return driver;
         }
 
         public async Task<List<Driver>> GetAllDriversAsync()
         {
-           var drivers=await _dbcontext.Drivers.ToListAsync();
-            if (!drivers.Any()) 
-            {
-                throw new InvalidOperationException("No Drivers Found");
-            }   
+            var drivers = await _driverRepository.GetAllAsync();
+            if (drivers.Count == 0) throw new InvalidOperationException("No drivers found");
             return drivers;
         }
 
         public async Task<Driver> GetDriverCompletedOrders(int driverId)
         {
-            var completedorderstodrover = await _dbcontext.Drivers
-                .Include(d => d.DeliveryDetails)!.ThenInclude(x => x.Order)
-                .SingleOrDefaultAsync(d => d.DriverId == driverId && d.DeliveryDetails!.Any(d => d.Status == DeliveryStatus.Delivered));
-                
-
-            if (completedorderstodrover is null)
-            {
-                throw new InvalidOperationException($"Driver with ID {driverId} not found.");
-            }
-
-            return completedorderstodrover;
+            var driver = await _driverRepository.GetDriverWithCompletedOrders(driverId)
+                         ?? throw new InvalidOperationException($"Driver with ID {driverId} not found.");
+            return driver;
         }
 
-        public async Task<Driver> GetDriverActiveOrders(int id)
+        public async Task<Driver> GetDriverActiveOrders(int driverId)
         {
-            var driver = await _dbcontext.Drivers.Include(o => o.DeliveryDetails)!.ThenInclude(d => d.Order)
-                .SingleOrDefaultAsync(o => o.DriverId == id && (o.DeliveryDetails!.Any(o => o.Status == DeliveryStatus.PickedUp || o.Status == DeliveryStatus.Assigned)));
-
-
-            if (driver == null)
-            {
-                throw new InvalidOperationException("Driver Not Found or No Active Orders");
-            }
+            var driver = await _driverRepository.GetDriverWithActiveOrders(driverId)
+                         ?? throw new InvalidOperationException("Driver not found or no active orders");
             return driver;
         }
 
         public async Task<List<Driver>> GetOnlyAvailableDrivers()
         {
-            var drivers=await _dbcontext.Drivers.Where(d => d.IsAvailable)
-                .ToListAsync();
-            if (!drivers.Any())
-            {
-                throw new InvalidOperationException("No Available Drivers Found");
-            }
+            var drivers = await _driverRepository.GetOnlyAvailableAsync();
+            if (drivers.Count == 0) throw new InvalidOperationException("No available drivers found");
             return drivers;
         }
 
         public async Task<Driver> GetDriverByID(int id)
         {
-           var driver = await _dbcontext.Drivers.SingleOrDefaultAsync(o => o.DriverId == id) ?? throw new InvalidOperationException("Driver Not Found");
+            var driver = await _driverRepository.GetByIdAsync(id)
+                         ?? throw new InvalidOperationException("Driver not found");
             return driver;
         }
 
         public async Task<Driver> MarkDriverAsAvailable(int id)
         {
-            var driver =await _dbcontext.Drivers.SingleOrDefaultAsync(o => o.DriverId == id) ?? throw new InvalidOperationException("Driver Not Found");
+            var driver = await _driverRepository.GetByIdAsync(id)
+                         ?? throw new InvalidOperationException("Driver not found");
             driver.IsAvailable = true;
-            await _dbcontext.SaveChangesAsync();
+            await _driverRepository.UpdateAsync(driver);
             return driver;
         }
-
         public async Task<Driver> MarkDriverAsUnAvailable(int id)
         {
-            var driver =await _dbcontext.Drivers.SingleOrDefaultAsync(o => o.DriverId == id) ?? throw new InvalidOperationException("Driver Not Found");
-            
+            var driver = await _driverRepository.GetByIdAsync(id)
+                         ?? throw new InvalidOperationException("Driver not found");
             driver.IsAvailable = false;
-            _dbcontext.Drivers.Update(driver);
-            await _dbcontext.SaveChangesAsync();
+            await _driverRepository.UpdateAsync(driver);
             return driver;
         }
 
         public async Task<Driver> UpdateDriver(int id, DriverDto driver)
         {
-           var getdriver= await _dbcontext.Drivers.SingleOrDefaultAsync(o=>o.DriverId==id)?? throw new InvalidOperationException("Driver Not Found");
-           
-            getdriver.Name = driver.Name?.Trim();
-            getdriver.PhoneNumber = driver.PhoneNumber?.Trim();
-            getdriver.VehicleType = driver.VehicleType;
-            getdriver.VehicleRegistration = driver.VehicleRegistration;
-            await _dbcontext.SaveChangesAsync();
-            return getdriver;
+            var existingDriver = await _driverRepository.GetByIdAsync(id)
+                                 ?? throw new InvalidOperationException("Driver not found");
+
+            existingDriver.Name = driver.Name?.Trim();
+            existingDriver.PhoneNumber = driver.PhoneNumber?.Trim();
+            existingDriver.VehicleType = driver.VehicleType;
+            existingDriver.VehicleRegistration = driver.VehicleRegistration;
+
+            await _driverRepository.UpdateAsync(existingDriver);
+            return existingDriver;
         }
+
+        
+       
+
+       
+        
     }
 }

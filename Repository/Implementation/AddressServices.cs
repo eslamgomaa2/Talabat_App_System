@@ -1,81 +1,77 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
     public class AddressServices : IAddressServices
     {
-        private readonly ApplicationDbContext _dbcontext;
-        private readonly IHttpContextAccessor _httpcontext;
+        private readonly IAddressRepository _addressRepository;
+        private readonly IHttpContextAccessor _httpContext;
 
-        public AddressServices(ApplicationDbContext dbcontext, IHttpContextAccessor httpcontext)
+        public AddressServices(IAddressRepository addressRepository, IHttpContextAccessor httpContext)
         {
-            _dbcontext = dbcontext;
-            _httpcontext = httpcontext;
+            _addressRepository = addressRepository;
+            _httpContext = httpContext;
         }
 
-        public async Task<List<Address>> GetUserAddressAsync(string userid)
+        public async Task<List<Address>> GetUserAddressAsync(string userId)
         {
-            var Address = await _addressrepo.GetUserAddressAsync(userid);
-            if (Address is null) {
-                throw new Exception("there isno user with this id"); 
-            }
-            return Address;
-        }
+            var addresses = await _addressRepository.GetUserAddressesAsync(userId);
+            if (addresses == null || !addresses.Any())
+                throw new Exception("There are no addresses for this user.");
 
+            return addresses;
+        }
 
         public async Task<Address> SetUserAddress(AddressDTO request)
         {
-            var userid = _httpcontext.HttpContext.User.Claims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier);
-            if (userid is null)
-            {
-                throw new Exception("User ID  not found. Make sure the user is authenticated.");
-            }
-            var address = MapingToAddress(request);
-            address.UserId = userid.Value; 
+            var userId = _httpContext.HttpContext.User.Claims
+                                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
-            await _dbcontext.Addresses.AddAsync(address); 
-            await _dbcontext.SaveChangesAsync();
+            if (string.IsNullOrEmpty(userId))
+                throw new Exception("User ID not found. Make sure the user is authenticated.");
 
+            var address = MapToAddress(request);
+            address.UserId = userId;
+
+            await _addressRepository.AddAddressAsync(address);
             return address;
         }
 
-       public  async Task<Address> DeleteUserAddressAsync(string userid)
+        public async Task<Address> EditUserAddressAsync(string userId, AddressDTO request)
         {
-            var address = await _dbcontext.Addresses.SingleOrDefaultAsync(o => o.UserId == userid) ?? throw new Exception("There IS No User With This id"); ;
-           
-            _dbcontext.Addresses.Remove(address);   
-            await _dbcontext.SaveChangesAsync();
-            return address;
-        }
+            var address = await _addressRepository.GetAddressByUserIdAsync(userId)
+                          ?? throw new Exception("No address found for this user.");
 
-        public async Task<Address> EditUserAddressAsync(string userid,AddressDTO request)
-        {
-            var address = await _dbcontext.Addresses.FirstOrDefaultAsync(o=>o.UserId==userid)?? throw new Exception("There IS No User With This id");
-            
-           address.AddressLine1= request.AddressLine1;
-            address.AddressLine2= request.AddressLine2;
+            address.AddressLine1 = request.AddressLine1;
+            address.AddressLine2 = request.AddressLine2;
             address.City = request.City;
             address.State = request.State;
             address.PostalCode = request.PostalCode;
+            address.Country = request.Country;
 
-            await _dbcontext.SaveChangesAsync();
+            await _addressRepository.UpdateAddressAsync(address);
             return address;
         }
 
-      
+        public async Task<Address> DeleteUserAddressAsync(string userId)
+        {
+            var address = await _addressRepository.GetAddressByUserIdAsync(userId)
+                          ?? throw new Exception("No address found for this user.");
 
-        private Address MapingToAddress(AddressDTO request) { 
+            await _addressRepository.DeleteAddressAsync(address);
+            return address;
+        }
+
+        private Address MapToAddress(AddressDTO request)
+        {
             return new Address
             {
                 AddressLine1 = request.AddressLine1,
@@ -83,15 +79,8 @@ namespace Repository.Implementation
                 City = request.City,
                 State = request.State,
                 PostalCode = request.PostalCode,
-                Country = request.Country,
-                
+                Country = request.Country
             };
-
-
-
-
         }
-
-        
     }
 }

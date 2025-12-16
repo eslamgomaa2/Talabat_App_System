@@ -3,62 +3,65 @@ using Domin.Helper;
 using Domin.Models;
 using Domin.paymentclasses;
 using Microsoft.Extensions.Options;
+using Repository.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
     public class PaymentService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly PaymobSettings _settings;
+        private readonly IPaymentRepository _paymentRepository;
 
-        public PaymentService(HttpClient httpClient, IOptions<PaymobSettings> settings, ApplicationDbContext context)
+        public PaymentService(IHttpClientFactory httpClientFactory, IOptions<PaymobSettings> settings, IPaymentRepository paymentRepository)
         {
-            _httpClient = httpClient;
+            _httpClientFactory = httpClientFactory;
             _settings = settings.Value;
-            _context = context;
+            _paymentRepository = paymentRepository;
         }
 
-
-        public async Task<string> GetAuthTokenAsync()
+        private HttpClient CreateClient()
         {
-            var response = await _httpClient.PostAsJsonAsync(
-                "https://accept.paymob.com/api/auth/tokens",
+            return _httpClientFactory.CreateClient("PaymobClient");
+        }
+
+        private async Task<string> GetAuthTokenAsync()
+        {
+            var client = CreateClient();
+            var response = await client.PostAsJsonAsync(
+                "api/auth/tokens",
                 new { api_key = _settings.ApiKey });
 
             var data = await response.Content.ReadFromJsonAsync<dynamic>();
             return data.token;
         }
 
-        
-        public async Task<int> CreatePaymobOrderAsync(string token, decimal amount, int orderId)
+        private async Task<int> CreatePaymobOrderAsync(string token, decimal amount, int orderId)
         {
+            var client = CreateClient();
+
             var orderRequest = new
             {
                 auth_token = token,
                 delivery_needed = false,
                 amount_cents = (int)(amount * 100),
                 currency = "EGP",
-                merchant_order_id = orderId 
+                merchant_order_id = orderId
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
-                "https://accept.paymob.com/api/ecommerce/orders",
-                orderRequest);
-
+            var response = await client.PostAsJsonAsync("api/ecommerce/orders", orderRequest);
             var data = await response.Content.ReadFromJsonAsync<dynamic>();
             return data.id;
         }
 
-        
         private async Task<string> GetPaymentKeyAsync(string token, int paymobOrderId, decimal amount, string email, string name, string phone)
         {
+            var client = CreateClient();
+
             var billingData = new
             {
                 apartment = "NA",
@@ -87,10 +90,7 @@ namespace Repository.Implementation
                 integration_id = _settings.IntegrationId
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
-                "https://accept.paymob.com/api/acceptance/payment_keys",
-                paymentKeyRequest);
-
+            var response = await client.PostAsJsonAsync("api/acceptance/payment_keys", paymentKeyRequest);
             var data = await response.Content.ReadFromJsonAsync<dynamic>();
             return data.token;
         }
@@ -99,7 +99,8 @@ namespace Repository.Implementation
         {
             var token = await GetAuthTokenAsync();
             var paymobOrderId = await CreatePaymobOrderAsync(token, request.amount, request.orderId);
-            var transactionn = new PaymentTransaction
+
+            var transaction = new PaymentTransaction
             {
                 Amount = request.amount,
                 OrderId = request.orderId,
@@ -110,13 +111,13 @@ namespace Repository.Implementation
                 PaymobOrderId = paymobOrderId,
                 Status = PaymentStatus.Pending
             };
-            _context.PaymentTransactions.Add(transactionn);
-            await _context.SaveChangesAsync();
-            var paymentKey = await GetPaymentKeyAsync(token, paymobOrderId, request.amount, request.email, request.name, request.phone);
 
+            await _paymentRepository.AddTransactionAsync(transaction);
+
+            var paymentKey = await GetPaymentKeyAsync(token, paymobOrderId, request.amount, request.email, request.name, request.phone);
             var iframeUrl = $"https://accept.paymob.com/api/acceptance/iframes/{_settings.IframeId}?payment_token={paymentKey}";
+
             return iframeUrl;
         }
     }
 }
-

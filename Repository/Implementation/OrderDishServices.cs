@@ -2,158 +2,110 @@
 using Domin.Enum;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
     public class OrderDishServices : IOrderDishServices
-
     {
-        private readonly ApplicationDbContext _dbContext;
-        private readonly IHttpContextAccessor _httpClientaccessor;
+        private readonly IOrderDishRepository _repository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public OrderDishServices(IHttpContextAccessor httpClientaccessor, ApplicationDbContext dbContext)
+        public OrderDishServices(IOrderDishRepository repository, IHttpContextAccessor httpContextAccessor)
         {
-            _httpClientaccessor = httpClientaccessor;
-            _dbContext = dbContext;
+            _repository = repository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<OrderItem> AddDishToExistingOrder(int idoforder, OrderItemDto orderItem)
+        public async Task<OrderItem> AddDishToExistingOrder(int orderId, OrderItemDto orderItemDto)
         {
-           var order =await _dbContext.Orders.FindAsync(idoforder)?? throw new Exception("Order Not Found");
-            var orderitem = new OrderItem
+            var order = await _repository.GetOrderByIdAsync(orderId) ?? throw new Exception("Order not found");
+
+            var orderItem = new OrderItem
             {
                 OrderId = order.OrderId,
-                DishId = orderItem.DishId,
-                Quantity = orderItem.Quantity,
-                PriceAtOrder = orderItem.PriceAtOrder,
+                DishId = orderItemDto.DishId,
+                Quantity = orderItemDto.Quantity,
+                PriceAtOrder = orderItemDto.PriceAtOrder,
                 CreatedAt = DateTime.Now
-                
             };
-            await _dbContext.OrderItems.AddAsync(orderitem);
-            await _dbContext.SaveChangesAsync();
-            return orderitem;
 
+            await _repository.AddOrderItemAsync(orderItem);
+            return orderItem;
         }
 
-        public async Task<OrderItem> CreateOrder(OrderItemDto orderItemreq)
+        public async Task<OrderItem> CreateOrder(OrderItemDto orderItemDto)
         {
-            var userid = _httpClientaccessor.HttpContext.User.Claims.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("USer Not Found") ;
-            var dish =  _dbContext.Dishes.SingleOrDefault(o=>o.DishId==orderItemreq.DishId)?? throw new Exception("dish Not Found"); 
-            var Address= await _dbContext.Addresses.SingleOrDefaultAsync(o=>o.UserId==userid)?? throw new Exception("Address Not Found"); ;
+            var userId = _httpContextAccessor.HttpContext?.User?.Claims
+                         ?.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
+                         ?? throw new Exception("User not found");
+
+            var dish = await _repository.GetDishByIdAsync(orderItemDto.DishId) ?? throw new Exception("Dish not found");
+            var address = await _repository.GetAddressByUserIdAsync(userId) ?? throw new Exception("Address not found");
 
             var order = new Order
             {
-               
                 CreatedAt = DateTime.Now,
                 Status = OrderStatus.Pending,
-                UserId = userid,
+                UserId = userId,
                 OrderDate = DateTime.Today,
                 RestaurantId = dish.RestaurantId,
-                AddressId=Address.AddressId,
-                
+                AddressId = address.AddressId
             };
 
-            await _dbContext.Orders.AddAsync(order);
-            await _dbContext.SaveChangesAsync();
+            await _repository.AddOrderAsync(order);
 
-            var orderitem =new OrderItem
-           {
-               OrderId = order.OrderId,
-               DishId = orderItemreq.DishId,
-               Quantity = orderItemreq.Quantity,
-               PriceAtOrder = orderItemreq.PriceAtOrder,
-               CreatedAt = DateTime.Now
-           };
+            var orderItem = new OrderItem
+            {
+                OrderId = order.OrderId,
+                DishId = orderItemDto.DishId,
+                Quantity = orderItemDto.Quantity,
+                PriceAtOrder = orderItemDto.PriceAtOrder,
+                CreatedAt = DateTime.Now
+            };
 
-            await _dbContext.OrderItems.AddAsync(orderitem);
-            await _dbContext.SaveChangesAsync();
-
-
-            return orderitem;
+            await _repository.AddOrderItemAsync(orderItem);
+            return orderItem;
         }
 
         public async Task<string> DeleteOrderDish(int orderItemId)
         {
-            var order =await _dbContext.OrderItems.FindAsync(orderItemId)??throw new Exception("OrderItem Not Found");
-            _dbContext.OrderItems.Remove(order);
-            await _dbContext.SaveChangesAsync();
-            return "Deleted Successfuly";
+            var orderItem = await _repository.GetOrderItemByIdAsync(orderItemId) ?? throw new Exception("Order item not found");
+            await _repository.DeleteOrderItemAsync(orderItem);
+            return "Deleted successfully";
         }
 
-        public async Task<List<OrderItem>> GetAllOrderDishForARestaurant(int restaurantid)
+        public async Task<List<OrderItem>> GetAllOrderDishForARestaurant(int restaurantId)
         {
-            var ordersitem=await _dbContext.OrderItems.Include(o=>o.Dish).Where(o=>o.Dish !=null &&o.Dish.RestaurantId==restaurantid).ToListAsync();
-            if ( !ordersitem.Any())
-            {
-                throw new Exception("No Order Items Found for this Restaurant");
-            }
-            return ordersitem;
+            var items = await _repository.GetAllOrderItemsForRestaurantAsync(restaurantId);
+            if (!items.Any()) throw new Exception("No order items found for this restaurant");
+            return items;
         }
 
-
-        public async Task<List<OrderItem>> GetMostOrderedIDishesForARestaurant(int restaurantid)  
+        public async Task<List<OrderItem>> GetMostOrderedDishesForARestaurant(int restaurantId)
         {
-            var orderitem=await _dbContext.OrderItems.Include(o => o.Dish)
-                .Where(o => o.Dish != null && o.Dish.RestaurantId == restaurantid)
-                .GroupBy(o => o.DishId)
-                .Select(g => new
-                {
-                    DishId = g.Key,
-                    Count = g.Count()
-                })
-                .OrderByDescending(g => g.Count)
-                .Take(5)
-                .ToListAsync();
-            if(orderitem.Any())
-                throw new Exception("No Order Items Found for this Restaurant");
-           
-            
-            return orderitem.Select(o => new OrderItem
-            {
-                DishId = o.DishId,
-                Quantity = o.Count,
-                Dish = _dbContext.Dishes.Find(o.DishId) 
-            }).ToList();
-            
-
+            var items = await _repository.GetMostOrderedDishesForRestaurantAsync(restaurantId);
+            if (!items.Any()) throw new Exception("No order items found for this restaurant");
+            return items;
         }
 
         public async Task<List<Dish>> GetMostPopularDishesAcrossAllRestaurants()
         {
-            var dishes = await _dbContext.OrderItems
-                .Include(o => o.Dish)
-                .Where(o => o.Dish != null)
-                .GroupBy(o => o.DishId)
-                .Select(g => new
-                {
-                    DishId = g.Key,
-                    Count = g.Count(),
-                    Dish = g.First().Dish 
-                })
-                .OrderByDescending(g => g.Count)
-                .Take(5)
-                .Select(g => g.Dish)
-                .ToListAsync();
-
-            return dishes!;
+            return await _repository.GetMostPopularDishesAcrossAllRestaurantsAsync();
         }
 
-        public async Task<OrderItem> UpdateOrderDishQuantity(int orderItemId, int Quantity)
+        public async Task<OrderItem> UpdateOrderDishQuantity(int orderItemId, int quantity)
         {
-            var orderitem = _dbContext.OrderItems.Find(orderItemId) ?? throw new Exception("Order Item Not Found");
-            orderitem.Quantity = Quantity;
-            orderitem.UpdatedAt = DateTime.Now;
-            await _dbContext.SaveChangesAsync();
-            return orderitem;
+            var orderItem = await _repository.GetOrderItemByIdAsync(orderItemId) ?? throw new Exception("Order item not found");
+            orderItem.Quantity = quantity;
+            orderItem.UpdatedAt = DateTime.Now;
+            await _repository.UpdateOrderItemAsync(orderItem);
+            return orderItem;
         }
     }
 }

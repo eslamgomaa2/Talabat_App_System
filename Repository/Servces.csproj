@@ -20,6 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.11" />
     <PackageReference Include="MimeKit" Version="4.12.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
@@ -27,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Domin\Domin.csproj" />
     <ProjectReference Include="..\SeedingData\SeedingData.csproj" />
+    <ProjectReference Include="..\Services\Repository.csproj" />
   </ItemGroup>
 
 </Project>

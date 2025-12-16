@@ -14,7 +14,7 @@ namespace SeedingData.Accounts
         {
             return new ApplicationUser
             {
-                Id = "1",
+                Id = 1,
                 FName = "Admin",
                 LName = "Admin",
                 UserName = "Admin",

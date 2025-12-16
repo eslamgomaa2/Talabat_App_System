@@ -10,7 +10,7 @@ namespace Repository.Interfaces
         Task<OrderItem> UpdateOrderDishQuantity(int orderItemId, int Quantity);
         Task<string> DeleteOrderDish(int orderItemId);
         Task<List<OrderItem>> GetAllOrderDishForARestaurant(int restaurantid);
-        Task<List<OrderItem>> GetMostOrderedIDishesForARestaurant(int restaurantid);
+        Task<List<OrderItem>> GetMostOrderedDishesForARestaurant(int restaurantid);
         Task<List<Dish>> GetMostPopularDishesAcrossAllRestaurants();
 
     }

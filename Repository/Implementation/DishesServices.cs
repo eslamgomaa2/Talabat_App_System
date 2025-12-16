@@ -1,38 +1,43 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Repository.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
     public class DishesServices : IDishesServices
     {
-        private readonly ApplicationDbContext _dbcontext;
+        private readonly IDishRepository _dishRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public DishesServices(ApplicationDbContext dbcontext, IHttpContextAccessor httpContextAccessor)
+        public DishesServices(IDishRepository dishRepository, IHttpContextAccessor httpContextAccessor)
         {
-            _dbcontext = dbcontext;
+            _dishRepository = dishRepository;
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<Dish> AddaDishForASpecificRrestaurant(DishDto request)
+       
+
+        public async Task<Dish> AddDishForSpecificRestaurant(DishDto request)
         {
-            var ownerId = _httpContextAccessor.HttpContext?.User?.Claims?.FirstOrDefault(o => o.Type == ClaimTypes.NameIdentifier)?.Value
-                ?? throw new Exception("Unauthorized");
+            var ownerId = _httpContextAccessor.HttpContext?.User?.Claims
+                            ?.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
+                            ?? throw new Exception("Unauthorized");
 
-            var restaurantOwner = await _dbcontext.Resaurant_Owners.SingleOrDefaultAsync(o => o.UserId == ownerId)
-                ?? throw new Exception("Owner not found");
-
-            var restaurant = await _dbcontext.Restaurants.SingleOrDefaultAsync(r => r.OwnerId == restaurantOwner.Id && r.RestaurantId == request.RestaurantId)
-                ?? throw new Exception("You do not own this restaurant");
+            
+            var exists = await _dishRepository.RestaurantExistsAsync(request.RestaurantId);
+            if (!exists)
+                throw new KeyNotFoundException("No restaurant found with this Id");
 
             if (request.ImageFile == null)
                 throw new Exception("Image cannot be null");
 
-            
             using var memoryStream = new MemoryStream();
             request.ImageFile.CopyTo(memoryStream);
             byte[] imageBytes = memoryStream.ToArray();
@@ -50,60 +55,53 @@ namespace Repository.Implementation
                 RestaurantId = request.RestaurantId
             };
 
-            await _dbcontext.Dishes.AddAsync(dish);
-            await _dbcontext.SaveChangesAsync();
+            await _dishRepository.AddAsync(dish);
             return dish;
         }
 
-        public async Task<Dish> DeletDish(int id)
+        public Task<Dish> DeletDish(int id)
         {
-            var dish = await _dbcontext.Dishes.FindAsync(id) ?? throw new KeyNotFoundException("Dish not found");
-            _dbcontext.Dishes.Remove(dish);
-            await _dbcontext.SaveChangesAsync();
+            throw new NotImplementedException();
+        }
+
+        public async Task<Dish> DeleteDish(int id)
+        {
+            var dish = await _dishRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Dish not found");
+            await _dishRepository.DeleteAsync(dish);
             return dish;
         }
 
         public async Task<List<Dish>> GetAllDishes()
         {
-            var dishes = await _dbcontext.Dishes.ToListAsync();
-            if (dishes.Count == 0)
-            {
-                throw new KeyNotFoundException("No dishes found");
-            }
+            var dishes = await _dishRepository.GetAllAsync();
+            if (dishes.Count == 0) throw new KeyNotFoundException("No dishes found");
             return dishes;
         }
 
         public async Task<Dish> GetDishById(int id)
         {
-            var dish = await _dbcontext.Dishes.Include(d => d.Restaurant).SingleOrDefaultAsync(d => d.DishId == id)
-                ?? throw new KeyNotFoundException("Dish not found");
+            var dish = await _dishRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Dish not found");
             return dish;
         }
 
         public async Task<List<Dish>> GetDishesByName(string name)
         {
-            var dishes = await _dbcontext.Dishes.Include(d => d.Restaurant).Where(d => d.Name == name).ToListAsync();
-            if (dishes.Count == 0)
-            {
-                throw new KeyNotFoundException("Dish not found");
-            }
+            var dishes = await _dishRepository.GetByNameAsync(name);
+            if (dishes.Count == 0) throw new KeyNotFoundException("Dish not found");
             return dishes;
         }
 
         public async Task<List<Dish>> GetOnlyAvailableDishesForRestaurant(int restaurantId)
         {
-            var isrestaurantexist = await _dbcontext.Restaurants.FindAsync(restaurantId)?? throw new KeyNotFoundException("No Restaurant With This Id"); ;
-            var dishes = await _dbcontext.Dishes.Include(d => d.Restaurant).Where(d => d.RestaurantId == restaurantId && d.IsAvailable).ToListAsync();
+            var dishes = await _dishRepository.GetAvailableForRestaurantAsync(restaurantId);
             if (dishes.Count == 0)
-            {
-                throw new KeyNotFoundException("No available dishes Found For This Restaurant.");
-            }
+                throw new KeyNotFoundException("No available dishes found for this restaurant.");
             return dishes;
         }
 
-        public async Task<Dish> UpdateDishes(int id, DishDto request)
+        public async Task<Dish> UpdateDish(int id, DishDto request)
         {
-            var dish = await _dbcontext.Dishes.FindAsync(id) ?? throw new KeyNotFoundException("Dish not found");
+            var dish = await _dishRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Dish not found");
 
             dish.Name = request.Name;
             dish.Price = request.Price;
@@ -113,9 +111,10 @@ namespace Repository.Implementation
             dish.Description = request.Description;
             dish.IsAvailable = request.IsAvailable;
 
-            _dbcontext.Dishes.Update(dish);
-            await _dbcontext.SaveChangesAsync();
+            await _dishRepository.UpdateAsync(dish);
             return dish;
         }
+
+       
     }
 }

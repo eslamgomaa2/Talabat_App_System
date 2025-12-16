@@ -13,12 +13,12 @@ namespace Repository.Interfaces
         
         Task<Restaurant> AddRestaurantAsync(RestaurantDTO request);
         Task<Restaurant> EditRestaurantAsync(int id,RestaurantDTO request);
-        Task<Restaurant> DeletRestaurantAsync(int id);
+        Task<Restaurant> DeleteRestaurantAsync(int id);
         Task<List<Restaurant>> GetRestaurantByName(string name);
         Task<List<Restaurant>> GetRestaurantsByCuisineType(string CuisineType);
-        Task<List<Dish>> GetDishesforRestaurant(int id);
-        Task<List<Address>> GetAddressesforRestaurant(int id);
-        Task<List<Restaurant>> GetAllRestaurantsforOwner(int id);
+        Task<List<Dish>> GetDishesForRestaurant(int id);
+        Task<List<Address>> GetAddressesForRestaurant(int id);
+        Task<List<Restaurant>> GetAllRestaurantsForOwner(int id);
         Task<List<Restaurant>> GetAllRestaurants();
 
         
