@@ -1,6 +1,9 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.Caching.Memory;
+using MimeKit.Encodings;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -14,11 +17,13 @@ namespace Repository.Implementation
     {
         private readonly IRestaurantRepository _restaurantRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IMemoryCache _cache;
 
-        public RestaurantServices(IRestaurantRepository restaurantRepository, IHttpContextAccessor httpContextAccessor)
+        public RestaurantServices(IRestaurantRepository restaurantRepository, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
         {
             _restaurantRepository = restaurantRepository;
             _httpContextAccessor = httpContextAccessor;
+            _cache = cache;
         }
 
         public async Task<Restaurant> AddRestaurantAsync(RestaurantDTO request)
@@ -51,8 +56,19 @@ namespace Repository.Implementation
             return await _restaurantRepository.EditRestaurantAsync(restaurant);
         }
 
-        public Task<List<Restaurant>> GetAllRestaurants() => _restaurantRepository.GetAllRestaurantsAsync();
+        public async  Task<List<Restaurant>> GetAllRestaurants()
+        {
+            string cashekey="all_restaurant";
+            if(_cache.TryGetValue(cashekey,out List<Restaurant> allrestaurant))
+                return allrestaurant;
 
+            var restaurants=   await _restaurantRepository.GetAllRestaurantsAsync();
+            if(restaurants==null)
+                throw new Exception("No restaurant found");
+            _cache.Set(cashekey,restaurants,TimeSpan.FromMinutes(30));
+            return restaurants;
+
+        }
         public Task<List<Restaurant>> GetRestaurantsByCuisineType(string cuisineType)
             => _restaurantRepository.GetRestaurantsByCuisineTypeAsync(cuisineType);
 

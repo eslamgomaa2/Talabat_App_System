@@ -1,6 +1,8 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -15,14 +17,16 @@ namespace Repository.Implementation
     {
         private readonly IDishRepository _dishRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IMemoryCache _cache;
 
-        public DishesServices(IDishRepository dishRepository, IHttpContextAccessor httpContextAccessor)
+        public DishesServices(IDishRepository dishRepository, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
         {
             _dishRepository = dishRepository;
             _httpContextAccessor = httpContextAccessor;
+            _cache = cache;
         }
 
-       
+
 
         public async Task<Dish> AddDishForSpecificRestaurant(DishDto request)
         {
@@ -73,8 +77,14 @@ namespace Repository.Implementation
 
         public async Task<List<Dish>> GetAllDishes()
         {
+            const string cacheKey = "all_dishes";
+            if(_cache.TryGetValue(cacheKey,out List<Dish> alldishes))
+                return alldishes;
+
             var dishes = await _dishRepository.GetAllAsync();
-            if (dishes.Count == 0) throw new KeyNotFoundException("No dishes found");
+            if (dishes.Count == 0)
+                throw new KeyNotFoundException("No dishes found");
+            _cache.Set(cacheKey, alldishes, TimeSpan.FromMinutes(5));
             return dishes;
         }
 

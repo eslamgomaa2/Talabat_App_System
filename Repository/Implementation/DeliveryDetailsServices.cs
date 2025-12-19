@@ -1,6 +1,7 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Enum;
 using Domin.Models;
+using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -11,10 +12,12 @@ namespace Repository.Implementation
     public class DeliveryDetailsServices : IDeliveryDetailsServices
     {
         private readonly IDeliveryDetailsRepository _repository;
+        private readonly IMemoryCache _cache;
 
-        public DeliveryDetailsServices(IDeliveryDetailsRepository repository)
+        public DeliveryDetailsServices(IDeliveryDetailsRepository repository, IMemoryCache cache)
         {
             _repository = repository;
+            _cache = cache;
         }
 
         public async Task<DeliveryDetail> CreateNewDelivery(DeliveryDetailsDto request)
@@ -51,12 +54,27 @@ namespace Repository.Implementation
 
         public async Task<List<DeliveryDetail>> GetAllDeliveryDetailsAsync()
         {
+            const string cacheKey = "delivery_details_all";
+
+            if (_cache.TryGetValue(cacheKey, out List<DeliveryDetail> cachedDeliveries))
+                return cachedDeliveries;
+
             var deliveries = await _repository.GetAllAsync();
+
             if (deliveries == null || deliveries.Count == 0)
                 throw new InvalidOperationException("No delivery details found.");
 
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                SlidingExpiration = TimeSpan.FromMinutes(3)
+            };
+
+            _cache.Set(cacheKey, deliveries, cacheOptions);
+
             return deliveries;
         }
+
 
         public async Task<List<DeliveryDetail>> GetAllDeliveryForADriver(int driverId)
         {

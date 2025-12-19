@@ -1,6 +1,8 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Enum;
+using Domin.Helper;
 using Domin.Models;
+using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -11,10 +13,12 @@ namespace Repository.Implementation
     public class DriverServices : IDriverServices
     {
         private readonly IDriverRepository _driverRepository;
+        private readonly IMemoryCache _cashe;
 
-        public DriverServices(IDriverRepository driverRepository)
+        public DriverServices(IDriverRepository driverRepository, IMemoryCache cashe)
         {
             _driverRepository = driverRepository;
+            _cashe = cashe;
         }
 
         public async Task<Driver> AddNewDriver(DriverDto driver)
@@ -62,8 +66,13 @@ namespace Repository.Implementation
 
         public async Task<List<Driver>> GetAllDriversAsync()
         {
+            string cacheKey = "all_drivers";
+            if(_cashe.TryGetValue(cacheKey,out List<Driver> alldrivers))
+                return alldrivers;
             var drivers = await _driverRepository.GetAllAsync();
             if (drivers.Count == 0) throw new InvalidOperationException("No drivers found");
+            _cashe.Set(cacheKey, drivers, TimeSpan.FromMinutes(10));
+            
             return drivers;
         }
 

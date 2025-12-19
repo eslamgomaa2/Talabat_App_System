@@ -18,7 +18,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseSqlServer(buil
 builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JWT"));
 builder.Services.Configure<PaymobSettings>(builder.Configuration.GetSection("PaymobSettings"));
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(
+    options =>
+{
+    options.ExpirationScanFrequency = TimeSpan.FromMinutes(5); 
+    options.SizeLimit = 1024;
+    options.CompactionPercentage = 0.2;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
 builder.Services.AddControllers().AddJsonOptions(options =>

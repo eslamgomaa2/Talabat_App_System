@@ -2,6 +2,7 @@
 using Domin.Enum;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -15,11 +16,13 @@ namespace Repository.Implementation
     {
         private readonly IOrderRepository _repository;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IMemoryCache _cache;
 
-        public OrderServices(IOrderRepository repository, IHttpContextAccessor httpContextAccessor)
+        public OrderServices(IOrderRepository repository, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
         {
             _repository = repository;
             _httpContextAccessor = httpContextAccessor;
+            _cache = cache;
         }
 
         public async Task<Order> CancelOrder(int orderId)
@@ -31,8 +34,13 @@ namespace Repository.Implementation
 
         public async Task<List<Order>> GetAllOrders()
         {
+            var cacheKey = "allorder";
+            if(_cache.TryGetValue(cacheKey, out List<Order> cachedOrders))
+                return cachedOrders;
+
             var orders = await _repository.GetAllAsync();
             if (!orders.Any()) throw new Exception("No orders found.");
+            _cache.Set(cacheKey, orders, TimeSpan.FromMinutes(10));
             return orders;
         }
 
