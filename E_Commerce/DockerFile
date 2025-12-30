@@ -1,0 +1,26 @@
+# Multi-stage Dockerfile for the E_Commerce ASP.NET Core app targeting .NET 9
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy project files and restore (Dockerfile is in the project folder)
+COPY *.csproj ./
+RUN dotnet restore --no-cache
+
+# Copy remaining source and publish
+COPY . .
+RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+
+# Runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+
+# Listen on port 80
+ENV ASPNETCORE_URLS=http://+:80
+
+# Copy published app from build stage
+COPY --from=build /app/publish .
+
+EXPOSE 80
+
+# Start the app (assumes output assembly name matches project folder: E_Commerce.dll)
+ENTRYPOINT ["dotnet", "E_Commerce.dll"]
