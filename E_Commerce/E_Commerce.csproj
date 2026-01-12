@@ -20,6 +20,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Domin\Domin.csproj" />
 		<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
-		<ProjectReference Include="..\Repository\Services.csproj" />
+		<ProjectReference Include="..\Repository\Repository.csproj" />
+		<ProjectReference Include="..\Services\Services.csproj" />
 	</ItemGroup>
 </Project>

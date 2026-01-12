@@ -1,9 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SeedingData.Mapping
 {
@@ -13,8 +8,8 @@ namespace SeedingData.Mapping
         {
             return new IdentityUserRole<string>
             {
-                UserId = "1", 
-                RoleId = "1"  
+                UserId = "1",
+                RoleId = "1"
             };
         }
     }

@@ -1,11 +1,6 @@
 ﻿using Domin.Enum;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Domin.Models
 {
@@ -27,7 +22,7 @@ namespace Domin.Models
 
         public DeliveryStatus Status { get; set; } = DeliveryStatus.Assigned;
 
-       
+
 
         // Navigation properties
         public Order? Order { get; set; }

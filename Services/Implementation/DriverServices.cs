@@ -1,12 +1,8 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Enum;
-using Domin.Helper;
 using Domin.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
@@ -67,12 +63,12 @@ namespace Repository.Implementation
         public async Task<List<Driver>> GetAllDriversAsync()
         {
             string cacheKey = "all_drivers";
-            if(_cashe.TryGetValue(cacheKey,out List<Driver> alldrivers))
+            if (_cashe.TryGetValue(cacheKey, out List<Driver> alldrivers))
                 return alldrivers;
             var drivers = await _driverRepository.GetAllAsync();
             if (drivers.Count == 0) throw new InvalidOperationException("No drivers found");
             _cashe.Set(cacheKey, drivers, TimeSpan.FromMinutes(10));
-            
+
             return drivers;
         }
 
@@ -135,10 +131,10 @@ namespace Repository.Implementation
             return existingDriver;
         }
 
-        
-       
 
-       
-        
+
+
+
+
     }
 }

@@ -25,14 +25,14 @@ namespace E_Commerce.Controllers
         [HttpPost("AddDish")]
         public async Task<IActionResult> AddDish([FromForm] DishDto request)
         {
-            var dishes = await _dishesServices.AddaDishForASpecificRrestaurant(request);
+            var dishes = await _dishesServices.AddDishForSpecificRestaurant(request);
             return Ok(dishes);
         }
 
         [HttpPut("UpdateDish/{id}")]
         public async Task<IActionResult> UpdateDish([FromRoute] int id, [FromForm] DishDto request)
         {
-            var dishes = await _dishesServices.UpdateDishes(id, request);
+            var dishes = await _dishesServices.UpdateDish(id, request);
             return Ok(dishes);
         }
 

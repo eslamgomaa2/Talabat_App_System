@@ -1,11 +1,6 @@
 ﻿using Domin.Enum;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Domin.Models
 {
@@ -16,14 +11,14 @@ namespace Domin.Models
         [ForeignKey("order")]
         public int OrderId { get; set; }
         [Required]
-        public int? PaymobTransactionId { get; set; } 
+        public int? PaymobTransactionId { get; set; }
         [Required]
-        public int? PaymobOrderId { get; set; } 
+        public int? PaymobOrderId { get; set; }
         [Required]
-        
+
         public decimal Amount { get; set; }
         [Required]
-        public string? Currency { get; set; } = "EGP"; 
+        public string? Currency { get; set; } = "EGP";
         [Required]
         public PaymentStatus Status { get; set; }
         [Required]

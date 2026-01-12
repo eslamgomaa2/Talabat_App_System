@@ -25,6 +25,7 @@ namespace Repository
         public DbSet<ApplicationUser> ApplictionUsers { get; set; }
         public DbSet<Resaurant_Owner> Resaurant_Owners { get; set; }
         public DbSet<Driver> Drivers { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

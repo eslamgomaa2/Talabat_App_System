@@ -3,9 +3,6 @@ using Domin.Enum;
 using Domin.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
@@ -160,7 +157,7 @@ namespace Repository.Implementation
 
             await _repository.DeleteAsync(delivery);
             return delivery;
-        
+
         }
     }
 }

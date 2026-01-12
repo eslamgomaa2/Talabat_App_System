@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Domin.Models
 {
@@ -25,7 +20,7 @@ namespace Domin.Models
 
         [Column(TypeName = "decimal(10, 2)")]
         public decimal PriceAtOrder { get; set; }
-        public DateTime CreatedAt { get; set; }=DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties

@@ -4,7 +4,6 @@ using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Repository;
@@ -16,29 +15,34 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JWT"));
+builder.Services.Configure<GoogleSettings>(builder.Configuration.GetSection("GoogleSettings"));
 builder.Services.Configure<PaymobSettings>(builder.Configuration.GetSection("PaymobSettings"));
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
 builder.Services.AddMemoryCache(
     options =>
 {
-    options.ExpirationScanFrequency = TimeSpan.FromMinutes(5); 
+    options.ExpirationScanFrequency = TimeSpan.FromMinutes(5);
     options.SizeLimit = 1024;
     options.CompactionPercentage = 0.2;
 });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-
 });
+
 builder.Services.AddHttpClient("PaymobClient", client =>
 {
     client.BaseAddress = new Uri("https://accept.paymob.com/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
-builder.Services.AddInfrastructure();
 
+builder.Services.AddInfrastructure();
 
 builder.Services.AddAuthentication(o =>
 {
@@ -60,9 +64,12 @@ builder.Services.AddAuthentication(o =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]!)),
             ClockSkew = TimeSpan.Zero
         };
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["GoogleSettings:ClientId"]!;
+        options.ClientSecret = builder.Configuration["GoogleSettings:ClientSecret"]!;
     });
-
-
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -97,9 +104,6 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-
-// Configure the HTTP request pipeline.
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -108,7 +112,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.MapControllers();

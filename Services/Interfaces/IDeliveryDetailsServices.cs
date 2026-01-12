@@ -1,12 +1,6 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Enum;
 using Domin.Models;
-using Org.BouncyCastle.Bcpg;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Repository.Interfaces
 {
@@ -17,8 +11,8 @@ namespace Repository.Interfaces
         public Task<DeliveryDetail> GetDeliveryByOrderID(int orderid);
         public Task<List<DeliveryDetail>> GetAllDeliveryForADriver(int driverid);
         public Task<DeliveryDetail> CreateNewDelivery(DeliveryDetailsDto request);
-        public Task<DeliveryDetail> UpdateEntireDeliveryRecord(int deleiveryid,DeliveryDetailsDto request);
-        public Task<DeliveryStatus> UpdateDeliveryStatus(int id,DeliveryStatus status);
+        public Task<DeliveryDetail> UpdateEntireDeliveryRecord(int deleiveryid, DeliveryDetailsDto request);
+        public Task<DeliveryStatus> UpdateDeliveryStatus(int id, DeliveryStatus status);
         public Task<DeliveryDetail> MarkAsDeliveredt_setDeliveredTime(int deleiveryid);
         public Task<DeliveryDetail> Canceldelivery(int deleiveryid);
         public Task<DeliveryStatus> GetCurrentDeliveryStatus(int deliveryid);

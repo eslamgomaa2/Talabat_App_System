@@ -1,7 +1,6 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Repository.Interfaces;
-using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {

@@ -1,21 +1,19 @@
-﻿using Domin.Models;
-using Microsoft.AspNetCore.Mvc;
-using Repository.Implementation;
-using Repository;
-using Domin.Enum;
+﻿using Domin.Enum;
 using Domin.Helper;
-using Microsoft.EntityFrameworkCore;
-using MailKit.Search;
-using System.Numerics;
 using Domin.paymentclasses;
 using Domin.webhook;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Repository;
+using Repository.Implementation;
 
 [ApiController]
 [Route("api/[controller]")]
 public class PaymentsController : ControllerBase
 {
     private readonly PaymentService _paymentService;
-    private readonly ApplicationDbContext _db;
+    private readonly ApplicationDbContext
+        _db;
     private readonly PaymobSettings _settings;
 
 
@@ -27,7 +25,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpPost("pay-now")]
-    public async Task<IActionResult> PayNow([FromBody]PayNowRequest request)
+    public async Task<IActionResult> PayNow([FromBody] PayNowRequest request)
     {
         var res = await _paymentService.CreatePaymentAsync(request);
         return Ok(new { res });
@@ -46,18 +44,18 @@ public class PaymentsController : ControllerBase
             var success = payload.obj.success;
             var amount = payload.obj.amount_cents / 100m;
 
-          
+
             var transaction = await _db.PaymentTransactions
                 .FirstOrDefaultAsync(t => t.PaymobOrderId == paymobOrderId);
 
             if (transaction == null)
             {
-                
+
                 throw new Exception("transaction not found");
             }
             else
             {
-                
+
                 transaction.PaymobTransactionId = paymobTransactionId;
                 transaction.Status = PaymentStatus.Pending;
                 transaction.PaidAt = success ? DateTime.UtcNow : null;
@@ -76,7 +74,7 @@ public class PaymentsController : ControllerBase
         }
         catch (Exception ex)
         {
-            
+
             return StatusCode(500, new { error = ex.Message });
         }
     }
@@ -84,4 +82,4 @@ public class PaymentsController : ControllerBase
 
 
 
-    
+

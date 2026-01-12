@@ -89,7 +89,7 @@ namespace E_Commerce.Controllers
         [HttpGet("{id}/completed-orders")]
         public async Task<IActionResult> GetDriverCompletedOrders(int id)
         {
-            
+
             var completedOrders = await _driverServices.GetDriverCompletedOrders(id);
             return Ok(completedOrders);
         }

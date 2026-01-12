@@ -23,14 +23,14 @@ namespace SeedingData.Roles
                 new IdentityRole
                 {
                     Id = "3",
-                    Name = "RestaurantOwner", 
+                    Name = "RestaurantOwner",
                     NormalizedName = "RESTAURANTOWNER"
                 },
                 new IdentityRole
                 {
                     Id = "4",
                     Name = "Driver",
-                    NormalizedName = "DRIVER" 
+                    NormalizedName = "DRIVER"
                 }
             };
         }

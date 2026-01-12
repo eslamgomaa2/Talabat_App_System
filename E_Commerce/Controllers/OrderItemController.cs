@@ -53,10 +53,10 @@ namespace E_Commerce.Controllers
         [HttpGet("GetMostOrderedDishesForARestaurant/{restaurantid}")]
         public async Task<IActionResult> GetMostOrderedItemsForARestaurant([FromRoute] int restaurantid)
         {
-            var result = await _orderItemServices.GetMostOrderedIDishesForARestaurant(restaurantid);
+            var result = await _orderItemServices.GetMostOrderedDishesForARestaurant(restaurantid);
             return Ok(result);
         }
     }
 
-    
+
 }

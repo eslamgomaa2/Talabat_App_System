@@ -1,7 +1,5 @@
-﻿
-using Domin.DTOS.Auth_DTO;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using Domin.DTOS.Auth_DTO;
+using Domin.Enum;
 using Microsoft.AspNetCore.Mvc;
 using Repository.Interfaces;
 using ForgotPasswordRequest = Domin.DTOS.Auth_DTO.ForgotPasswordRequest;
@@ -11,7 +9,6 @@ namespace E_Commerce.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    
     public class AccountController : ControllerBase
     {
         private readonly IAccountServices _accountServices;
@@ -22,7 +19,7 @@ namespace E_Commerce.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<IActionResult> login([FromBody]AuthenticationRequest request ) 
+        public async Task<IActionResult> Login([FromBody] AuthenticationRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -35,7 +32,23 @@ namespace E_Commerce.Controllers
             }
 
             return Ok(result);
-        
+        }
+
+        [HttpPost("LoginWithGoogle")]
+        public async Task<IActionResult> LoginWithGoogle([FromBody] ExternalLoginRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _accountServices.LoginWithGoogle(request, Roles.Customer);
+            if (!result.IsAuthenticated)
+            {
+                return BadRequest(result.Message);
+            }
+
+            return Ok(result);
         }
 
         [HttpPost("RegisterUserAscustomer")]
@@ -45,31 +58,31 @@ namespace E_Commerce.Controllers
             {
                 return BadRequest(ModelState);
             }
-            var result = await _accountServices.RegisterUserAscustomer(request);
-            if (!result.IsAuthenticated)
-            {
-                return BadRequest(result.Message);
-            }
-
-            return Ok(new{ result.Message,result.IsAuthenticated});
-
-        }
-        [HttpPost("RegisterUserAsDriver")]
-        public async Task<IActionResult> RegisterUserADriver([FromBody] Register request)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var result = await _accountServices.RegisterUserAsDriver(request);
+            var result = await _accountServices.RegisterUserAs(request, Roles.Customer);
             if (!result.IsAuthenticated)
             {
                 return BadRequest(result.Message);
             }
 
             return Ok(new { result.Message, result.IsAuthenticated });
-
         }
+
+        [HttpPost("RegisterUserAsDriver")]
+        public async Task<IActionResult> RegisterUserAsDriver([FromBody] Register request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _accountServices.RegisterUserAs(request, Roles.Driver);
+            if (!result.IsAuthenticated)
+            {
+                return BadRequest(result.Message);
+            }
+
+            return Ok(new { result.Message, result.IsAuthenticated });
+        }
+
         [HttpPost("RegisterUserAsRestaurantOwner")]
         public async Task<IActionResult> RegisterUserAsRestaurantOwner([FromBody] Register request)
         {
@@ -77,18 +90,17 @@ namespace E_Commerce.Controllers
             {
                 return BadRequest(ModelState);
             }
-            var result = await _accountServices.RegisterUserAsRestaurantOwner(request);
+            var result = await _accountServices.RegisterUserAs(request, Roles.RestaurantOwner);
             if (!result.IsAuthenticated)
             {
                 return BadRequest(result.Message);
             }
 
             return Ok(new { result.Message, result.IsAuthenticated });
-
         }
 
         [HttpPost("ForgetPassword")]
-        public async Task<IActionResult> Forgetpassword([FromBody] ForgotPasswordRequest request)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -96,19 +108,17 @@ namespace E_Commerce.Controllers
             }
             await _accountServices.ForgotPassword(request);
             return Ok("Check your email for reset password link");
-
         }
 
         [HttpPost("ResetPassword")]
-        public async Task<IActionResult> Resetpassword([FromBody] ResetPasswordRequest request)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-           var res= await _accountServices.ResetPassword(request);
+            var res = await _accountServices.ResetPassword(request);
             return Ok(res);
-
         }
     }
 }

@@ -1,15 +1,9 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
@@ -34,7 +28,7 @@ namespace Repository.Implementation
                             ?.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
                             ?? throw new Exception("Unauthorized");
 
-            
+
             var exists = await _dishRepository.RestaurantExistsAsync(request.RestaurantId);
             if (!exists)
                 throw new KeyNotFoundException("No restaurant found with this Id");
@@ -78,7 +72,7 @@ namespace Repository.Implementation
         public async Task<List<Dish>> GetAllDishes()
         {
             const string cacheKey = "all_dishes";
-            if(_cache.TryGetValue(cacheKey,out List<Dish> alldishes))
+            if (_cache.TryGetValue(cacheKey, out List<Dish> alldishes))
                 return alldishes;
 
             var dishes = await _dishRepository.GetAllAsync();
@@ -125,6 +119,6 @@ namespace Repository.Implementation
             return dish;
         }
 
-       
+
     }
 }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Domin.DTOS.DTO
 {
@@ -27,7 +22,7 @@ namespace Domin.DTOS.DTO
         [MaxLength(20)]
         public string? PostalCode { get; set; }
 
-        
+
         [MaxLength(100)]
         public string? Country { get; set; }
 

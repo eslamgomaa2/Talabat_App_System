@@ -4,11 +4,6 @@ using Domin.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
@@ -35,7 +30,7 @@ namespace Repository.Implementation
         public async Task<List<Order>> GetAllOrders()
         {
             var cacheKey = "allorder";
-            if(_cache.TryGetValue(cacheKey, out List<Order> cachedOrders))
+            if (_cache.TryGetValue(cacheKey, out List<Order> cachedOrders))
                 return cachedOrders;
 
             var orders = await _repository.GetAllAsync();

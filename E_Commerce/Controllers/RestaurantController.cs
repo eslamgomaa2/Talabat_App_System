@@ -39,7 +39,7 @@ namespace E_Commerce.Controllers
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteRestaurantAsync([FromRoute] int id)
         {
-            var result = await _restaurantServices.DeletRestaurantAsync(id);
+            var result = await _restaurantServices.DeleteRestaurantAsync(id);
             return Ok(result);
         }
 
@@ -60,14 +60,14 @@ namespace E_Commerce.Controllers
         [HttpGet("{id}/dishes")]
         public async Task<IActionResult> GetDishesForRestaurant([FromRoute] int id)
         {
-            var dishes = await _restaurantServices.GetDishesforRestaurant(id);
+            var dishes = await _restaurantServices.GetDishesForRestaurant(id);
             return Ok(dishes);
         }
 
         [HttpGet("{id}/addresses")]
         public async Task<IActionResult> GetAddressesForRestaurant([FromRoute] int id)
         {
-            var addresses = await _restaurantServices.GetAddressesforRestaurant(id);
+            var addresses = await _restaurantServices.GetAddressesForRestaurant(id);
             return Ok(addresses);
         }
 

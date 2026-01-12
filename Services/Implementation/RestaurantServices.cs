@@ -1,15 +1,9 @@
 ﻿using Domin.DTOS.DTO;
 using Domin.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Caching.Memory;
-using MimeKit.Encodings;
 using Repository.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Repository.Implementation
 {
@@ -56,16 +50,16 @@ namespace Repository.Implementation
             return await _restaurantRepository.EditRestaurantAsync(restaurant);
         }
 
-        public async  Task<List<Restaurant>> GetAllRestaurants()
+        public async Task<List<Restaurant>> GetAllRestaurants()
         {
-            string cashekey="all_restaurant";
-            if(_cache.TryGetValue(cashekey,out List<Restaurant> allrestaurant))
+            string cashekey = "all_restaurant";
+            if (_cache.TryGetValue(cashekey, out List<Restaurant> allrestaurant))
                 return allrestaurant;
 
-            var restaurants=   await _restaurantRepository.GetAllRestaurantsAsync();
-            if(restaurants==null)
+            var restaurants = await _restaurantRepository.GetAllRestaurantsAsync();
+            if (restaurants == null)
                 throw new Exception("No restaurant found");
-            _cache.Set(cashekey,restaurants,TimeSpan.FromMinutes(30));
+            _cache.Set(cashekey, restaurants, TimeSpan.FromMinutes(30));
             return restaurants;
 
         }

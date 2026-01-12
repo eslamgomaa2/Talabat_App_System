@@ -9,6 +9,7 @@ using Repository.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Google.Apis.Auth;
 
 namespace Repository.Implementation
 {
@@ -18,20 +19,22 @@ namespace Repository.Implementation
         private readonly Jwt _jwt;
         private readonly IEmailService _emailService;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IRefreshTokenService _refreshTokenService;
 
         public AccountServices(
             UserManager<ApplicationUser> userManager,
             IOptions<Jwt> jwt,
             IEmailService emailService,
-            ApplicationDbContext dbContext)
+            ApplicationDbContext dbContext,
+            IRefreshTokenService refreshTokenService)
         {
             _userManager = userManager;
             _jwt = jwt.Value;
             _emailService = emailService;
             _dbContext = dbContext;
+            _refreshTokenService = refreshTokenService;
         }
 
-        
         public async Task<AuthenticationResponse> Login(AuthenticationRequest request)
         {
             var user = await _userManager.FindByEmailAsync(request.Email!);
@@ -39,6 +42,7 @@ namespace Repository.Implementation
                 return new AuthenticationResponse { Message = "Email or Password is not correct" };
 
             var jwtToken = await GenerateJwtSecurityToken(user);
+            var refreshToken = await _refreshTokenService.CreateRefreshTokenAsync(user.Id);
             var roles = await _userManager.GetRolesAsync(user);
 
             return new AuthenticationResponse
@@ -48,17 +52,60 @@ namespace Repository.Implementation
                 Email = user.Email,
                 IsAuthenticated = true,
                 JWToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                RefreshToken = refreshToken.Token,
+                RefreshTokenExpiration = refreshToken.ExpiryDate,
                 Roles = roles.ToList()
             };
         }
 
-        private async Task<JwtSecurityToken> GenerateJwtSecurityToken(ApplicationUser user)
+        public async Task<AuthenticationResponse> RefreshToken(RefreshTokenRequest request)
+        {
+            var refreshToken = await _refreshTokenService.ValidateRefreshTokenAsync(request.RefreshToken!);
+            if (refreshToken == null)
+                return new AuthenticationResponse { Message = "Invalid or expired refresh token" };
+
+            var user = await _userManager.FindByIdAsync(refreshToken.UserId.ToString());
+            if (user == null)
+                return new AuthenticationResponse { Message = "User not found" };
+
+            var jwtToken = await GenerateJwtSecurityToken(user);
+            var newRefreshToken = await _refreshTokenService.CreateRefreshTokenAsync(user.Id);
+
+            // Revoke old token and replace with new one
+            await _refreshTokenService.RevokeRefreshTokenAsync(refreshToken.Token, newRefreshToken.Token);
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return new AuthenticationResponse
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                IsAuthenticated = true,
+                JWToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                RefreshToken = newRefreshToken.Token,
+                RefreshTokenExpiration = newRefreshToken.ExpiryDate,
+                Roles = roles.ToList()
+            };
+        }
+
+        public async Task<bool> RevokeToken(string token)
+        {
+            var refreshToken = await _refreshTokenService.ValidateRefreshTokenAsync(token);
+            if (refreshToken == null)
+                return false;
+
+            await _refreshTokenService.RevokeRefreshTokenAsync(token);
+            return true;
+        }
+
+            private async Task<JwtSecurityToken> GenerateJwtSecurityToken(ApplicationUser user)
         {
             var userclaims = await _userManager.GetClaimsAsync(user);
             var userroles = await _userManager.GetRolesAsync(user);
             var claims = new[]
             {
-                new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName!),
                 new Claim(ClaimTypes.Email, user.Email!)
             }
@@ -76,9 +123,9 @@ namespace Repository.Implementation
                 signingCredentials: creds
             );
         }
-      
 
-        
+
+
         public async Task<AuthenticationResponse> RegisterUserAscustomer(Register register)
             => await RegisterUserAs(register, Roles.Customer);
 
@@ -104,9 +151,9 @@ namespace Repository.Implementation
             if (!result.Succeeded)
                 return new AuthenticationResponse { Message = string.Join(" ", result.Errors.Select(e => e.Description)) };
 
-             await _userManager.AddToRoleAsync(newUser, role.ToString());
+            await _userManager.AddToRoleAsync(newUser, role.ToString());
 
-            
+
             if (role == Roles.Driver)
             {
                 var driver = new Driver
@@ -116,7 +163,7 @@ namespace Repository.Implementation
                     VehicleRegistration = register.VehicleRegistration,
                     VehicleType = register.VehicleType,
                     CreatedAt = DateTime.UtcNow
-                    
+
                 };
                 await _dbContext.Drivers.AddAsync(driver);
             }
@@ -128,7 +175,7 @@ namespace Repository.Implementation
                     LName = register.LName,
                     Email = register.Email,
                     Phone_Numbber = register.UserName,
-                    
+
                 };
                 await _dbContext.Resaurant_Owners.AddAsync(owner);
             }
@@ -182,7 +229,7 @@ namespace Repository.Implementation
                 PhoneNumberConfirmed = true
             };
         }
-       
+
 
         #region Password Management
         public async Task ForgotPassword(ForgotPasswordRequest request)
@@ -209,5 +256,99 @@ namespace Repository.Implementation
                 : new AuthenticationResponse { Message = "Failed to reset password" };
         }
         #endregion
+
+        public async Task<AuthenticationResponse> LoginWithGoogle(ExternalLoginRequest request, Roles role = Roles.Customer)
+        {
+            try
+            {
+                
+                var payload = await GoogleJsonWebSignature.ValidateAsync(
+                    request.IdToken!,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { _jwt.Audience }
+                    });
+
+                
+                var user = await _userManager.FindByEmailAsync(payload.Email);
+
+                if (user == null)
+                {
+                    // Create new user from Google payload
+                    user = new ApplicationUser
+                    {
+                        Email = payload.Email,
+                        UserName = payload.Email,
+                        FName = payload.GivenName ?? "",
+                        LName = payload.FamilyName ?? "",
+                        EmailConfirmed = true,
+                        PhoneNumberConfirmed = true
+                    };
+
+                    var result = await _userManager.CreateAsync(user);
+
+                    if (!result.Succeeded)
+                    {
+                        return new AuthenticationResponse
+                        {
+                            Message = string.Join(" ", result.Errors.Select(e => e.Description))
+                        };
+                    }
+
+                   
+                    await _userManager.AddToRoleAsync(user, role.ToString());
+
+                    
+                    if (role == Roles.Driver)
+                    {
+                        var driver = new Driver
+                        {
+                            Name = $"{user.FName} {user.LName}",
+                            PhoneNumber = user.PhoneNumber ?? "",
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await _dbContext.Drivers.AddAsync(driver);
+                    }
+                    else if (role == Roles.RestaurantOwner)
+                    {
+                        var owner = new Resaurant_Owner
+                        {
+                            FName = user.FName,
+                            LName = user.LName,
+                            Email = user.Email,
+                            Phone_Numbber = user.UserName
+                        };
+                        await _dbContext.Resaurant_Owners.AddAsync(owner);
+                    }
+
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                
+                var jwtToken = await GenerateJwtSecurityToken(user);
+                var refreshToken = await _refreshTokenService.CreateRefreshTokenAsync(user.Id);
+                var roles = await _userManager.GetRolesAsync(user);
+
+                return new AuthenticationResponse
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    IsAuthenticated = true,
+                    JWToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                    RefreshToken = refreshToken.Token,
+                    RefreshTokenExpiration = refreshToken.ExpiryDate,
+                    Roles = roles.ToList()
+                };
+            }
+            catch (InvalidOperationException)
+            {
+                return new AuthenticationResponse { Message = "Invalid or expired Google token" };
+            }
+            catch (Exception ex)
+            {
+                return new AuthenticationResponse { Message = $"An error occurred: {ex.Message}" };
+            }
+        }
     }
 }

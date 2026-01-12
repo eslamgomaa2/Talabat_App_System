@@ -1,5 +1,4 @@
 ﻿using Domin.DTOS.DTO;
-using Domin.Models;
 using Microsoft.AspNetCore.Mvc;
 using Repository.Interfaces;
 

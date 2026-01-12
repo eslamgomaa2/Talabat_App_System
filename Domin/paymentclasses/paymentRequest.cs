@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Domin.paymentclasses
 {
     public class PayNowRequest
     {
         [Required]
-        public  decimal amount { get; set; }
+        public decimal amount { get; set; }
         [Required]
         public string email { get; set; }
         [Required]
@@ -20,7 +15,7 @@ namespace Domin.paymentclasses
         [Required]
         public int orderId { get; set; }
 
-    
-            
+
+
     }
 }

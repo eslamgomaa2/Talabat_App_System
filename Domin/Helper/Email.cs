@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Domin.Helper
 {
@@ -14,7 +9,7 @@ namespace Domin.Helper
         [Required]
         public string? MailTo { get; set; }
         [Required]
-        public string? Subject { get; set; } 
-        
+        public string? Subject { get; set; }
+
     }
 }

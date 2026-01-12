@@ -30,6 +30,8 @@ namespace Infrastructure
             Services.AddScoped<IAccountRepository, AccountRepository>();
             Services.AddScoped<IAddressRepository, AddressRepository>();
             Services.AddScoped<IPaymentRepository, PaymentRepository>();
+            Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 
 

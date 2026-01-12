@@ -1,5 +1,4 @@
 ﻿using Domin.DTOS.DTO;
-using Domin.Models;
 using Microsoft.AspNetCore.Mvc;
 using Repository.Interfaces;
 
@@ -17,13 +16,13 @@ namespace E_Commerce.Controllers
         }
 
         [HttpPut("EditUser/{userid}")]
-        public async Task<IActionResult> EditUser([FromBody] UserDto userrequest,[FromRoute] string userid)
+        public async Task<IActionResult> EditUser([FromBody] UserDto userrequest, [FromRoute] string userid)
         {
             var res = await _userprofile.EditUser(userid, userrequest);
 
             return Ok(res);
         }
 
-       
+
     }
 }
